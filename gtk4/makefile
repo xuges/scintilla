@@ -159,8 +159,7 @@ SRC_OBJS = \
 GTK_OBJS = \
 	ScintillaBase.o \
 	PlatGTK.o \
-	ScintillaGTK.o \
-	ScintillaGTKAccessible.o
+	ScintillaGTK.o
 
 $(COMPLIB): $(SRC_OBJS) $(GTK_OBJS) $(MARSHALLER)
 	$(AR) $(ARFLAGS) $@ $^
