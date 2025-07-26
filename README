@@ -1,3 +1,32 @@
+# Scintilla with GTK4
+
+![](doc/gtk4.png)
+
+
+
+Feature:
+Basic editor. (input,cursor,selection,scroll)
+Basic clipboard. (text copy/paste)
+
+TODO:
+Menu popup.
+Input method.
+Drag-And-Drop.
+
+
+
+It took me some time to port Scintilla to the gtk4 platform.
+I have completed some basic functions, but I don't want to continue,
+because after test, it was found that the performance is as bad as that of GtkSourceView.
+I didn't investigate the reason.
+It might be a problem with Pango. Since the rendering process was not under much pressure, but the CPU was under considerable stress.
+
+
+
+--- Origin README ---
+
+
+
 README for building of Scintilla, Lexilla, and SciTE
 
 Scintilla and Lexilla can be built by themselves.
@@ -84,8 +113,8 @@ To build Scintilla, run xcodebuild in the scintilla/cocoa/ScintillaFramework or
 scintilla/cocoa/Scintilla directory
 
         cd cocoa/Scintilla
-
-	xcodebuild
+    
+    xcodebuild
 
 *** Qt version ***
 
