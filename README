@@ -1,8 +1,6 @@
 # Scintilla with GTK4
 
-![](doc/gtk4.png)
-
-
+![](https://raw.githubusercontent.com/xuges/scintilla/refs/heads/gtk4/doc/gtk4.png)
 
 Feature:
 Basic editor. (input,cursor,selection,scroll)
@@ -13,19 +11,10 @@ Menu popup.
 Input method.
 Drag-And-Drop.
 
-
-
-It took me some time to port Scintilla to the gtk4 platform.
-I have completed some basic functions, but I don't want to continue,
-because after test, it was found that the performance is as bad as that of GtkSourceView.
-I didn't investigate the reason.
-It might be a problem with Pango. Since the rendering process was not under much pressure, but the CPU was under considerable stress.
-
-
+It took me some time to port the Scintilla to the gtk4 platform.
+But after test, the performance is as bad as that of GtkSourceView, I will try to resolve it.
 
 --- Origin README ---
-
-
 
 README for building of Scintilla, Lexilla, and SciTE
 
