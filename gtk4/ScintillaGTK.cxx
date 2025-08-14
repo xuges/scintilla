@@ -33,13 +33,6 @@
 #include <gdk/gdkwayland.h>
 #endif
 
-#if defined(_WIN32)
-// On Win32 use windows.h to access clipboard (rectangular format) and systems parameters
-#undef NOMINMAX
-#define NOMINMAX
-#include <windows.h>
-#endif
-
 #include "ScintillaTypes.h"
 #include "ScintillaMessages.h"
 #include "ScintillaStructures.h"
@@ -112,18 +105,8 @@ enum {
 
 gint scintilla_signals[LAST_SIGNAL] = { 0 };
 
-const GdkDragAction actionCopyOrMove = static_cast<GdkDragAction>(GDK_ACTION_COPY | GDK_ACTION_MOVE);
-
 GtkWidget *PWidget(const Window &w) noexcept {
 	return static_cast<GtkWidget *>(w.GetID());
-}
-
-void MapWidget(GtkWidget *widget) noexcept {
-	if (widget &&
-		gtk_widget_get_visible(GTK_WIDGET(widget)) &&
-		!IS_WIDGET_MAPPED(widget)) {
-		gtk_widget_map(widget);
-	}
 }
 
 bool SettingGet(GtkSettings *settings, const gchar *name, gpointer value) noexcept {

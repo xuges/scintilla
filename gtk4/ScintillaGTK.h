@@ -47,10 +47,6 @@ class ScintillaGTK : public ScintillaBase {
 
 	size_t inClearSelection = 0;
 
-#if PLAT_GTK_WIN32
-	CLIPFORMAT cfColumnSelect;
-#endif
-
 	bool preeditInitialized;
 	Window wPreedit;
 	Window wPreeditDraw;
