@@ -48,8 +48,8 @@ class ScintillaGTK : public ScintillaBase {
 	size_t inClearSelection = 0;
 
 	bool preeditInitialized;
-	Window wPreedit;
-	Window wPreeditDraw;
+	//Window wPreedit;
+	//Window wPreeditDraw;
 	UniqueIMContext im_context;
 	GUnicodeScript lastNonCommonScript;
 

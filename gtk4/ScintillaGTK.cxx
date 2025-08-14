@@ -188,7 +188,7 @@ ScintillaGTK::~ScintillaGTK() {
 		scrollBarIdleID = 0;
 	}
 	ClearPrimarySelection();
-	wPreedit.Destroy();
+	//wPreedit.Destroy();
 	if (settingsHandlerId) {
 		g_signal_handler_disconnect(settings, settingsHandlerId);
 	}
@@ -325,9 +325,9 @@ gint ScintillaGTK::FocusInThis(GtkWidget *) {
 	try {
 		SetFocusState(true);
 
-		/* TODO: input method support
 		if (im_context) {
 			gtk_im_context_focus_in(im_context.get());
+			/*
 			PreEditString pes(im_context.get());
 			if (PWidget(wPreedit)) {
 				if (!preeditInitialized) {
@@ -342,8 +342,8 @@ gint ScintillaGTK::FocusInThis(GtkWidget *) {
 					gtk_widget_hide(PWidget(wPreedit));
 				}
 			}
+			*/
 		}
-		*/
 	} catch (...) {
 		errorStatus = Status::Failure;
 	}
@@ -357,12 +357,12 @@ gint ScintillaGTK::FocusIn(GtkWidget *self, ScintillaGTK* sciThis) {
 gint ScintillaGTK::FocusOutThis(GtkWidget *) {
 	try {
 		SetFocusState(false);
-		/* TODO: input method support
+		/*
 		if (PWidget(wPreedit))
 			gtk_widget_hide(PWidget(wPreedit));
+		*/
 		if (im_context)
 			gtk_im_context_focus_out(im_context.get());
-		*/
 
 	} catch (...) {
 		errorStatus = Status::Failure;
@@ -417,6 +417,17 @@ void ScintillaGTK::Init() {
 	gtk_widget_set_focusable(wid, true);
 	gtk_widget_set_can_focus(wid, true);
 
+	// TODO: input method support
+	im_context.reset(gtk_im_multicontext_new());
+	g_signal_connect(G_OBJECT(im_context.get()), "commit",
+		G_CALLBACK(Commit), this);
+	g_signal_connect(G_OBJECT(im_context.get()), "preedit-changed",
+		G_CALLBACK(PreeditChanged), this);
+	g_signal_connect(G_OBJECT(im_context.get()), "retrieve-surrounding",
+		G_CALLBACK(RetrieveSurrounding), this);
+	g_signal_connect(G_OBJECT(im_context.get()), "delete-surrounding",
+		G_CALLBACK(DeleteSurrounding), this);
+
 	GtkEventController* motionEvent = gtk_event_controller_motion_new();
 	g_signal_connect(G_OBJECT(motionEvent), "motion", G_CALLBACK(Motion), this);
 	gtk_widget_add_controller(wid, motionEvent);
@@ -430,27 +441,17 @@ void ScintillaGTK::Init() {
 	g_signal_connect(G_OBJECT(clickEvent), "pressed", G_CALLBACK(MousePress), this);
 	g_signal_connect(G_OBJECT(clickEvent), "released", G_CALLBACK(MouseRelease), this);
 	gtk_widget_add_controller(wid, GTK_EVENT_CONTROLLER(clickEvent));
-	
 
 	GtkEventController* keyEvent = gtk_event_controller_key_new();
 	g_signal_connect(G_OBJECT(keyEvent), "key-pressed", G_CALLBACK(KeyPress), this);
-	g_signal_connect(G_OBJECT(keyEvent), "key-released", G_CALLBACK(KeyRelease), this);
+	//g_signal_connect(G_OBJECT(keyEvent), "key-released", G_CALLBACK(KeyRelease), this);
+	gtk_event_controller_key_set_im_context(GTK_EVENT_CONTROLLER_KEY(keyEvent), im_context.get());
 	gtk_widget_add_controller(wid, keyEvent);
 
 	GtkEventController* scrollEvent = gtk_event_controller_scroll_new(GTK_EVENT_CONTROLLER_SCROLL_BOTH_AXES);
 	g_signal_connect(G_OBJECT(scrollEvent), "scroll", G_CALLBACK(ScrollEvent), this);
 	gtk_widget_add_controller(wid, scrollEvent);
 	
-	// TODO: input method support
-	im_context.reset(gtk_im_multicontext_new());
-	g_signal_connect(G_OBJECT(im_context.get()), "commit",
-		G_CALLBACK(Commit), this);
-	g_signal_connect(G_OBJECT(im_context.get()), "preedit-changed",
-		G_CALLBACK(PreeditChanged), this);
-	g_signal_connect(G_OBJECT(im_context.get()), "retrieve-surrounding",
-		G_CALLBACK(RetrieveSurrounding), this);
-	g_signal_connect(G_OBJECT(im_context.get()), "delete-surrounding",
-		G_CALLBACK(DeleteSurrounding), this);
 
 	wText = gtk_drawing_area_new();
 	GtkWidget* widtxt = PWidget(wText);
@@ -484,11 +485,13 @@ void ScintillaGTK::Init() {
 	//GtkDropTarget* dropTarget = gtk_drop_target_new();
 
 	/* create pre-edit window */
-	wPreedit = gtk_popover_new();
-	wPreeditDraw = gtk_drawing_area_new();
-	GtkWidget *predrw = PWidget(wPreeditDraw);
-	gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(predrw), GtkDrawingAreaDrawFunc(DrawPreedit), this, nullptr);
-	gtk_popover_set_child(GTK_POPOVER(PWidget(wPreedit)), predrw);
+	//wPreedit = gtk_popover_new();
+	//wPreeditDraw = gtk_drawing_area_new();
+	//GtkWidget *predrw = PWidget(wPreeditDraw);
+	//gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(predrw), GtkDrawingAreaDrawFunc(DrawPreedit), this, nullptr);
+	//gtk_widget_set_parent(PWidget(wPreedit), PWidget(wMain));
+	//gtk_popover_set_child(GTK_POPOVER(PWidget(wPreedit)), predrw);
+	//gtk_popover_present(GTK_POPOVER(PWidget(wPreedit)));
 
 	settings = gtk_settings_get_default();
 
@@ -1732,14 +1735,14 @@ int KeyTranslate(int keyIn) noexcept {
 
 gboolean ScintillaGTK::KeyPressThis(GtkEventControllerKey* self, guint keyval, guint keycode, GdkModifierType state) {
 	try {
-		fprintf(stderr, "SC-key: %d %x\n", keyval, state);
+		//printf("SC-key: %d %x\n", keyval, state);
 		GdkEvent* event = gtk_event_controller_get_current_event(GTK_EVENT_CONTROLLER(self));
-		if (gtk_im_context_filter_keypress(im_context.get(), event)) {
-			return 1;
-		}
-		if (!keyval) {
-			return true;
-		}
+
+		if (keyval == GDK_KEY_Return ||
+			keyval == GDK_KEY_KP_Enter ||
+			keyval == GDK_KEY_ISO_Enter ||
+			keyval == GDK_KEY_Escape)
+			gtk_im_context_reset(im_context.get());
 
 		const bool shift = (state & GDK_SHIFT_MASK) != 0;
 		bool ctrl = (state & GDK_CONTROL_MASK) != 0;
@@ -1907,7 +1910,7 @@ void ScintillaGTK::SetCandidateWindowPos() {
 
 void ScintillaGTK::CommitThis(char *commitStr) {
 	try {
-		//~ fprintf(stderr, "Commit '%s'\n", commitStr);
+		// printf("Commit '%s'\n", commitStr);
 		view.imeCaretBlockOverride = false;
 
 		if (pdoc->TentativeActive()) {
@@ -2039,12 +2042,22 @@ void ScintillaGTK::PreeditChangedWindowedThis() {
 				pt.y = 0;
 
 			// TODO: use GtkFixed layout ?
+
+			GdkRectangle pointing = { 0 };
+			pointing.x = x + static_cast<gint>(pt.x);
+			pointing.y = y + static_cast<gint>(pt.y);
+
+			//gtk_popover_set_pointing_to(GTK_POPOVER(PWidget(wPreedit)), &pointing);
+			//gtk_widget_set_size_request(PWidget(wPreedit), w, h);
+			//gtk_popover_popup(GTK_POPOVER(PWidget(wPreedit)));
+
 			/*gtk_window_move(GTK_WINDOW(PWidget(wPreedit)), x + static_cast<gint>(pt.x), y + static_cast<gint>(pt.y));
 			gtk_window_resize(GTK_WINDOW(PWidget(wPreedit)), w, h);*/
-			gtk_widget_show(PWidget(wPreedit));
-			gtk_widget_queue_draw(PWidget(wPreeditDraw));
+			//gtk_widget_show(PWidget(wPreedit));
+			//gtk_widget_queue_draw(PWidget(wPreeditDraw));
 		} else {
-			gtk_widget_hide(PWidget(wPreedit));
+			//gtk_popover_popdown(GTK_POPOVER(PWidget(wPreedit)));
+			//gtk_widget_hide(PWidget(wPreedit));
 		}
 	} catch (...) {
 		errorStatus = Status::Failure;
@@ -2052,11 +2065,13 @@ void ScintillaGTK::PreeditChangedWindowedThis() {
 }
 
 void ScintillaGTK::PreeditChanged(GtkIMContext *, ScintillaGTK *sciThis) {
-	if ((sciThis->imeInteraction == IMEInteraction::Inline) || (sciThis->KoreanIME())) {
-		sciThis->PreeditChangedInlineThis();
-	} else {
-		sciThis->PreeditChangedWindowedThis();
-	}
+	sciThis->PreeditChangedInlineThis();
+	// NOTE: cannot implement windowed pre-edit, GTK4 remove the popup GtkWindow
+	//if ((sciThis->imeInteraction == IMEInteraction::Inline) || (sciThis->KoreanIME())) {
+	//	sciThis->PreeditChangedInlineThis();
+	//} else {
+	//	sciThis->PreeditChangedWindowedThis();
+	//}
 }
 
 bool ScintillaGTK::RetrieveSurroundingThis(GtkIMContext *context) {
@@ -2125,7 +2140,7 @@ void ScintillaGTK::Dispose(GObject *object) {
 		ScintillaObject *scio = SCINTILLA(object);
 		ScintillaGTK *sciThis = static_cast<ScintillaGTK *>(scio->pscin);
 
-		// TODO: unparent all child widget
+		gtk_widget_unparent(PWidget(sciThis->wText));
 
 		if (PWidget(sciThis->scrollbarv)) {
 			gtk_widget_unparent(PWidget(sciThis->scrollbarv));
@@ -2136,6 +2151,9 @@ void ScintillaGTK::Dispose(GObject *object) {
 			gtk_widget_unparent(PWidget(sciThis->scrollbarh));
 			sciThis->scrollbarh = nullptr;
 		}
+
+		if (sciThis->im_context)
+			gtk_im_context_reset(sciThis->im_context.get());
 
 		scintilla_class_parent_class->dispose(object);
 	} catch (...) {
