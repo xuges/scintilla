@@ -1892,11 +1892,18 @@ void Menu::CreatePopUp() {
 	gtk_widget_insert_action_group(GTK_WIDGET(mid), "menu", G_ACTION_GROUP(group));
 	g_object_set_data(G_OBJECT(mid), "group", group);
 	g_object_ref_sink(G_OBJECT(mid));
+	gtk_popover_set_has_arrow(GTK_POPOVER(mid), false);
+	gtk_widget_set_halign(GTK_WIDGET(mid), GTK_ALIGN_START);
+	gtk_popover_set_position(GTK_POPOVER(mid), GTK_POS_BOTTOM);
+	gtk_popover_present(GTK_POPOVER(mid));
 }
 
 void Menu::Destroy() noexcept {
 	if (mid)
+	{
+		gtk_widget_unparent(GTK_WIDGET(mid));
 		g_object_unref(G_OBJECT(mid));
+	}
 	mid = nullptr;
 }
 
@@ -1910,6 +1917,7 @@ static void MenuPositionFunc(GtkMenu *, gint *x, gint *y, gboolean *, gpointer u
 
 void Menu::Show(Point pt, const Window &w) {
 	GdkRectangle rect = { pt.x, pt.y, 1, 1 };
+	gtk_widget_set_parent(GTK_WIDGET(mid), GTK_WIDGET(w.GetID()));
 	gtk_popover_set_pointing_to(GTK_POPOVER(mid), &rect);
 	gtk_popover_popup(GTK_POPOVER(mid));
 }

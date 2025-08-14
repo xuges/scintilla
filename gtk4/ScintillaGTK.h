@@ -157,10 +157,9 @@ private:
 	static void Map(GtkWidget *widget);
 	void UnMapThis();
 	static void UnMap(GtkWidget *widget);
-	gint FocusInThis(GtkWidget *widget);
-	static gint FocusIn(GtkWidget* self, ScintillaGTK* sciThis);
-	gint FocusOutThis(GtkWidget *widget);
-	static gint FocusOut(GtkWidget* widget, ScintillaGTK* sciThis);
+	static void FocusNotify(GtkEventControllerFocus* controller, GParamSpec* pspec, ScintillaGTK* sciThis);
+	gint FocusInThis();
+	gint FocusOutThis();
 	static void SizeRequest(GtkWidget *widget, GtkRequisition *requisition);
 	static void GetPreferredWidth(GtkWidget *widget, gint *minimalWidth, gint *naturalWidth);
 	static void GetPreferredHeight(GtkWidget *widget, gint *minimalHeight, gint *naturalHeight);

@@ -321,7 +321,7 @@ public:
 
 }
 
-gint ScintillaGTK::FocusInThis(GtkWidget *) {
+gint ScintillaGTK::FocusInThis() {
 	try {
 		SetFocusState(true);
 
@@ -350,11 +350,16 @@ gint ScintillaGTK::FocusInThis(GtkWidget *) {
 	return FALSE;
 }
 
-gint ScintillaGTK::FocusIn(GtkWidget *self, ScintillaGTK* sciThis) {
-	return sciThis->FocusInThis(self);
+void ScintillaGTK::FocusNotify(GtkEventControllerFocus* controller, GParamSpec* pspec, ScintillaGTK* sciThis)
+{
+	bool focus = gtk_event_controller_focus_is_focus(controller);
+	if (focus)
+		sciThis->FocusInThis();
+	else
+		sciThis->FocusOutThis();
 }
 
-gint ScintillaGTK::FocusOutThis(GtkWidget *) {
+gint ScintillaGTK::FocusOutThis() {
 	try {
 		SetFocusState(false);
 		/*
@@ -368,10 +373,6 @@ gint ScintillaGTK::FocusOutThis(GtkWidget *) {
 		errorStatus = Status::Failure;
 	}
 	return FALSE;
-}
-
-gint ScintillaGTK::FocusOut(GtkWidget *widget, ScintillaGTK* sciThis) {
-	return sciThis->FocusOutThis(widget);
 }
 
 void ScintillaGTK::SizeRequest(GtkWidget *widget, GtkRequisition *requisition) {
@@ -417,7 +418,6 @@ void ScintillaGTK::Init() {
 	gtk_widget_set_focusable(wid, true);
 	gtk_widget_set_can_focus(wid, true);
 
-	// TODO: input method support
 	im_context.reset(gtk_im_multicontext_new());
 	g_signal_connect(G_OBJECT(im_context.get()), "commit",
 		G_CALLBACK(Commit), this);
@@ -433,11 +433,26 @@ void ScintillaGTK::Init() {
 	gtk_widget_add_controller(wid, motionEvent);
 
 	GtkEventController* focusEvent = gtk_event_controller_focus_new();
-	g_signal_connect(G_OBJECT(focusEvent), "enter", G_CALLBACK(FocusIn), this);
-	g_signal_connect(G_OBJECT(focusEvent), "leave", G_CALLBACK(FocusOut), this);
+	g_signal_connect(G_OBJECT(focusEvent), "notify::is-focus", G_CALLBACK(FocusNotify), this);
 	gtk_widget_add_controller(wid, focusEvent);
 
+	// primary click
 	GtkGesture* clickEvent = gtk_gesture_click_new();
+	gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(clickEvent), GDK_BUTTON_PRIMARY);
+	g_signal_connect(G_OBJECT(clickEvent), "pressed", G_CALLBACK(MousePress), this);
+	g_signal_connect(G_OBJECT(clickEvent), "released", G_CALLBACK(MouseRelease), this);
+	gtk_widget_add_controller(wid, GTK_EVENT_CONTROLLER(clickEvent));
+
+	// middle click
+	clickEvent = gtk_gesture_click_new();
+	gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(clickEvent), GDK_BUTTON_MIDDLE);
+	g_signal_connect(G_OBJECT(clickEvent), "pressed", G_CALLBACK(MousePress), this);
+	g_signal_connect(G_OBJECT(clickEvent), "released", G_CALLBACK(MouseRelease), this);
+	gtk_widget_add_controller(wid, GTK_EVENT_CONTROLLER(clickEvent));
+
+	// right click
+	clickEvent = gtk_gesture_click_new();
+	gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(clickEvent), GDK_BUTTON_SECONDARY);
 	g_signal_connect(G_OBJECT(clickEvent), "pressed", G_CALLBACK(MousePress), this);
 	g_signal_connect(G_OBJECT(clickEvent), "released", G_CALLBACK(MouseRelease), this);
 	gtk_widget_add_controller(wid, GTK_EVENT_CONTROLLER(clickEvent));
@@ -1164,25 +1179,23 @@ namespace {
 }
 
 void ScintillaGTK::AddToPopUp(const char *label, int cmd, bool enabled) {
-	GMenu* menu = (GMenu*)gtk_popover_menu_get_menu_model(GTK_POPOVER_MENU(popup.GetID()));
-	GActionMap* group = (GActionMap*)g_object_get_data(G_OBJECT(popup.GetID()), "group");
-
 	size_t len = strlen(label);
-	if (len == 0)
+	if (len != 0)
 	{
-		g_menu_append_section(menu, nullptr, nullptr);
-		return;
+		GMenu* menu = (GMenu*)gtk_popover_menu_get_menu_model(GTK_POPOVER_MENU(popup.GetID()));
+		GActionMap* group = (GActionMap*)g_object_get_data(G_OBJECT(popup.GetID()), "group");
+
+		std::string name = makeActionName(label, len);
+		std::string detailed = makeDetailedAction(name);
+
+		GSimpleAction* action = g_simple_action_new(name.c_str(), nullptr);
+		g_simple_action_set_enabled(action, enabled);
+		g_object_set_data(G_OBJECT(action), "CmdNum", GINT_TO_POINTER(cmd));
+		g_signal_connect(G_OBJECT(action), "activate", G_CALLBACK(PopUpCB), this);
+		g_action_map_add_action(group, G_ACTION(action));
+
+		g_menu_append(menu, label, detailed.c_str());
 	}
-
-	std::string name = makeActionName(label, len);
-	std::string detailed = makeDetailedAction(name);
-
-	GSimpleAction* action = g_simple_action_new(name.c_str(), nullptr);
-	g_object_set_data(G_OBJECT(action), "CmdNum", GINT_TO_POINTER(cmd));
-	g_signal_connect(G_OBJECT(action), "activate", G_CALLBACK(PopUpCB), this);
-	g_action_map_add_action(group, G_ACTION(action));
-
-	g_menu_append(menu, label, detailed.c_str());
 }
 
 bool ScintillaGTK::OwnPrimarySelection() {
@@ -1217,7 +1230,7 @@ void ScintillaGTK::ClaimSelection() {
 
 // Detect rectangular text, convert line ends to current mode, convert from or to UTF-8
 void ScintillaGTK::GetGtkSelectionText(GdkClipboard* clipboard, GAsyncResult* result, SelectionText& selText) {
-	GError* error;
+	GError* error = nullptr;
 	const char* data = gdk_clipboard_read_text_finish(clipboard, result, &error);
 	if (error)
 		return;
