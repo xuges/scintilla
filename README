@@ -5,10 +5,10 @@
 Feature:
 Basic editor. (input,cursor,selection,scroll)
 Basic clipboard. (text copy/paste)
+Input method. (inline pre-edit)
+Menu popup.
 
 TODO:
-Menu popup.
-Input method.
 Drag-And-Drop.
 
 It took me some time to port the Scintilla to the gtk4 platform.
