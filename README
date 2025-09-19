@@ -11,8 +11,9 @@ Menu popup.
 TODO:
 Drag-And-Drop.
 
-It took me some time to port the Scintilla to the gtk4 platform.
-But after test, the performance is as bad as that of GtkSourceView, I will try to resolve it.
+NOTE:
+You need to turn off buffered rendering to improve performance:
+scintilla_send_message(sci, SCI_SETBUFFEREDDRAW, 0, 0);
 
 --- Origin README ---
 
