@@ -545,6 +545,20 @@ void ScintillaGTK::Init() {
 	vs.indicators[SC_INDICATOR_TARGET] = Indicator(IndicatorStyle::StraightBox, colourIME);
 
 	fontOptionsPrevious = FontOptions(PWidget(wText));
+
+	// avoid over-drawing
+	constexpr guint FrameRate = 30;
+	drawTimer = g_timeout_add(1000 / FrameRate, [](gpointer data)->gboolean
+		{
+			auto self = (ScintillaGTK*)data;
+			if (self->needDraw)
+			{
+				self->needDraw = false;
+				gtk_widget_queue_draw(PWidget(self->wText));
+			}
+			return G_SOURCE_CONTINUE;
+		}, this
+	);
 }
 
 void ScintillaGTK::Finalise() {
@@ -552,6 +566,7 @@ void ScintillaGTK::Finalise() {
 		FineTickerCancel(static_cast<TickReason>(tr));
 	}
 
+	g_source_remove(drawTimer);
 	ScintillaBase::Finalise();
 }
 
@@ -2283,8 +2298,8 @@ void ScintillaGTK::DrawThis(GtkSnapshot* snapshot) {
 			gtk_style_context_restore(styleContext);
 		}
 #endif
+		needDraw = true; // lazy draw
 		parentClass->snapshot(PWidget(wMain), snapshot);
-		gtk_widget_queue_draw(PWidget(wText));
 
 		//gtk_container_propagate_draw(
 		//	GTK_CONTAINER(PWidget(wMain)), PWidget(scrollbarh), cr);
