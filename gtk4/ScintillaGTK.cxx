@@ -895,12 +895,14 @@ void ScintillaGTK::ScrollText(Sci::Line linesToMove) {
 
 void ScintillaGTK::SetVerticalScrollPos() {
 	DwellEnd(true);
-	gtk_adjustment_set_value(GTK_ADJUSTMENT(adjustmentv), static_cast<gdouble>(topLine));
+	if (!scrollBarIdleID)
+		gtk_adjustment_set_value(GTK_ADJUSTMENT(adjustmentv), static_cast<gdouble>(topLine));
 }
 
 void ScintillaGTK::SetHorizontalScrollPos() {
 	DwellEnd(true);
-	gtk_adjustment_set_value(GTK_ADJUSTMENT(adjustmenth), xOffset);
+	if (!scrollBarIdleID)
+		gtk_adjustment_set_value(GTK_ADJUSTMENT(adjustmenth), xOffset);
 }
 
 bool ScintillaGTK::ModifyScrollBars(Sci::Line nMax, Sci::Line nPage) {
