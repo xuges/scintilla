@@ -463,8 +463,9 @@ void ScintillaGTK::Init() {
 	gtk_event_controller_key_set_im_context(GTK_EVENT_CONTROLLER_KEY(keyEvent), im_context.get());
 	gtk_widget_add_controller(wid, keyEvent);
 
-	// scroll TODO: support touch pad
-	GtkEventController* scrollEvent = gtk_event_controller_scroll_new(GTK_EVENT_CONTROLLER_SCROLL_BOTH_AXES);
+	// scroll
+	auto scrollFlags = GtkEventControllerScrollFlags(GTK_EVENT_CONTROLLER_SCROLL_BOTH_AXES | GTK_EVENT_CONTROLLER_SCROLL_DISCRETE);
+	GtkEventController* scrollEvent = gtk_event_controller_scroll_new(scrollFlags);
 	g_signal_connect(G_OBJECT(scrollEvent), "scroll", G_CALLBACK(ScrollEvent), this);
 	gtk_widget_add_controller(wid, scrollEvent);
 	
@@ -1535,12 +1536,25 @@ gint ScintillaGTK::ScrollEvent(GtkEventControllerScroll* self, gdouble dx, gdoub
 
 gint ScintillaGTK::ScrollEventThis(GtkEventControllerScroll* self, gdouble dx, gdouble dy) {
 	try {
-		if (gtk_event_controller_scroll_get_unit(self) != GDK_SCROLL_UNIT_WHEEL) {
-			return FALSE;
-		}
-
 		EventData event = getEventData(GTK_EVENT_CONTROLLER(self));
 		GdkScrollDirection direction = gdk_scroll_event_get_direction(event.event);
+
+		// Smooth scrolling (touch pad)
+		if (direction == GDK_SCROLL_SMOOTH) {
+			if (dx != 0)
+			{
+				// horizontal
+				int hScroll = gtk_adjustment_get_step_increment(adjustmenth);
+				hScroll *= dx * linesPerScroll; // scroll by this many characters
+				HorizontalScrollTo(xOffset + hScroll);
+			}
+			if (dy != 0)
+			{
+				// vertical
+				ScrollTo(topLine + dy * linesPerScroll);
+			}
+			return TRUE;
+		}
 
 		// Compute amount and direction to scroll (even tho on win32 there is
 		// intensity of scrolling info in the native message, gtk doesn't
@@ -1573,11 +1587,6 @@ gint ScintillaGTK::ScrollEventThis(GtkEventControllerScroll* self, gdouble dx, g
 		// only regular scrolling is supported there.  Also, unpatched win32gtk
 		// issues spurious button 2 mouse events during wheeling, which can cause
 		// problems (a patch for both was submitted by archaeopteryx.com on 13Jun2001)
-
-		// Smooth scrolling not supported
-		if (direction == GDK_SCROLL_SMOOTH) {
-			return FALSE;
-		}
 
 		// Horizontal scrolling
 		if (direction == GDK_SCROLL_LEFT || direction == GDK_SCROLL_RIGHT || event.state & GDK_SHIFT_MASK) {
