@@ -1884,11 +1884,19 @@ Menu::Menu() noexcept : mid(nullptr) {}
 void Menu::CreatePopUp() {
 	Destroy();
 	GMenu* model = g_menu_new();
+	g_object_ref_sink(model);
+
 	GSimpleActionGroup* group = g_simple_action_group_new();
+	g_object_ref_sink(group);
+
 	mid = gtk_popover_menu_new_from_model(G_MENU_MODEL(model));
+	g_object_ref_sink(G_OBJECT(mid));
+	g_object_unref(model);
+
 	gtk_widget_insert_action_group(GTK_WIDGET(mid), "menu", G_ACTION_GROUP(group));
 	g_object_set_data(G_OBJECT(mid), "group", group);
-	g_object_ref_sink(G_OBJECT(mid));
+	g_object_unref(group);
+
 	gtk_popover_set_has_arrow(GTK_POPOVER(mid), false);
 	gtk_widget_set_halign(GTK_WIDGET(mid), GTK_ALIGN_START);
 	gtk_popover_set_position(GTK_POPOVER(mid), GTK_POS_BOTTOM);
