@@ -1188,29 +1188,73 @@ namespace {
 		}
 		return res;
 	}
+
 	std::string makeDetailedAction(const std::string& name)
 	{
-		return std::string("menu.").append(name);
+		std::string res;
+		res.reserve(name.size() + 5);
+		return res.append("menu.").append(name);
+	}
+
+	const char* translateActionLabel(int cmd, const char* label)
+	{
+		enum
+		{
+			idcmdUndo = 10,
+			idcmdRedo = 11,
+			idcmdCut = 12,
+			idcmdCopy = 13,
+			idcmdPaste = 14,
+			idcmdDelete = 15,
+			idcmdSelectAll = 16
+		};
+
+		auto lang = pango_language_to_string(gtk_get_default_language());
+		if (strncmp(lang, "zh", 2) == 0)
+		{
+			switch (cmd)
+			{
+			case idcmdUndo:
+				return "撤销";
+			case idcmdRedo:
+				return "重做";
+			case idcmdCut:
+				return "剪切";
+			case idcmdCopy:
+				return "复制";
+			case idcmdPaste:
+				return "粘贴";
+			case idcmdDelete:
+				return "删除";
+			case idcmdSelectAll:
+				return "全选";
+			}
+		}
+
+		return label;
 	}
 }
 
 void ScintillaGTK::AddToPopUp(const char *label, int cmd, bool enabled) {
-	size_t len = strlen(label);
-	if (len != 0)
+	if (cmd)
 	{
-		GMenu* menu = (GMenu*)gtk_popover_menu_get_menu_model(GTK_POPOVER_MENU(popup.GetID()));
-		GActionMap* group = (GActionMap*)g_object_get_data(G_OBJECT(popup.GetID()), "group");
+		size_t len = strlen(label);
+		if (len != 0)
+		{
+			GMenu* menu = (GMenu*)gtk_popover_menu_get_menu_model(GTK_POPOVER_MENU(popup.GetID()));
+			GActionMap* group = (GActionMap*)g_object_get_data(G_OBJECT(popup.GetID()), "group");
 
-		std::string name = makeActionName(label, len);
-		std::string detailed = makeDetailedAction(name);
+			std::string name = makeActionName(label, len);
+			std::string detailed = makeDetailedAction(name);
 
-		GSimpleAction* action = g_simple_action_new(name.c_str(), nullptr);
-		g_simple_action_set_enabled(action, enabled);
-		g_object_set_data(G_OBJECT(action), "CmdNum", GINT_TO_POINTER(cmd));
-		g_signal_connect(G_OBJECT(action), "activate", G_CALLBACK(PopUpCB), this);
-		g_action_map_add_action(group, G_ACTION(action));
+			GSimpleAction* action = g_simple_action_new(name.c_str(), nullptr);
+			g_simple_action_set_enabled(action, enabled);
+			g_object_set_data(G_OBJECT(action), "CmdNum", GINT_TO_POINTER(cmd));
+			g_signal_connect(G_OBJECT(action), "activate", G_CALLBACK(PopUpCB), this);
+			g_action_map_add_action(group, G_ACTION(action));
 
-		g_menu_append(menu, label, detailed.c_str());
+			g_menu_append(menu, translateActionLabel(cmd, label), detailed.c_str());
+		}
 	}
 }
 
@@ -1451,7 +1495,7 @@ gint ScintillaGTK::MousePressThis(GtkGestureClick* self, gint nPress, gdouble x,
 		// On X, instead of sending literal modifiers use the user specified
 		// modifier, defaulting to control instead of alt.
 		// This is because most X window managers grab alt + click for moving
-		//const bool alt = (event.state & modifierTranslated(rectangularSelectionModifier)) != 0; TODO��support macOS
+		//const bool alt = (event.state & modifierTranslated(rectangularSelectionModifier)) != 0; TODO��support macOS
 		const bool alt = (event.state & GDK_ALT_MASK) != 0;
 		const bool meta = (event.state & GDK_META_MASK) != 0;
 
@@ -1515,7 +1559,7 @@ gint ScintillaGTK::MouseReleaseThis(GtkGestureClick* self, gint nPress, gdouble 
 			// On X, instead of sending literal modifiers use the user specified
 			// modifier, defaulting to control instead of alt.
 			// This is because most X window managers grab alt + click for moving
-			//const bool alt = (event.state & modifierTranslated(rectangularSelectionModifier)) != 0; TODO��support macOS
+			//const bool alt = (event.state & modifierTranslated(rectangularSelectionModifier)) != 0; TODO��support macOS
 			const bool alt = (event.state & GDK_ALT_MASK) != 0;
 			const bool meta = (event.state & GDK_META_MASK) != 0;
 
