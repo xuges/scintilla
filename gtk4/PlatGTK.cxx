@@ -1921,7 +1921,7 @@ static void MenuPositionFunc(GtkMenu *, gint *x, gint *y, gboolean *, gpointer u
 #endif
 
 void Menu::Show(Point pt, const Window &w) {
-	GdkRectangle rect = { pt.x, pt.y, 1, 1 };
+	GdkRectangle rect = { int(pt.x), int(pt.y), 1, 1 };
 	gtk_widget_set_parent(GTK_WIDGET(mid), GTK_WIDGET(w.GetID()));
 	gtk_popover_set_pointing_to(GTK_POPOVER(mid), &rect);
 	gtk_popover_popup(GTK_POPOVER(mid));
